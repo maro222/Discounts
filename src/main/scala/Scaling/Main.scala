@@ -141,16 +141,28 @@ object Main extends App {
   val dbUrl = "jdbc:sqlite:H:/omar/ITI - Data Management/Scala/Discounts/orders.db"
   val csvPath = "H:/omar/ITI - Data Management/Scala/Discounts/src/main/scala/TRX10M.csv"
 
-
   // ── Thread pool — capped at number of CPU cores ───────────────────────────
+  //What is ForkJoinPool ?
+  //   It 's the engine that manages those threads and decides how to split work between them.
+  //  When you call.par , Scala hands your data to ForkJoinPool and says "process this in parallel."
+  //  ForkJoinPool uses a strategy called "divide and conquer":
+  // tasks are divided recursively and make heap explosion problem
+  // Solution is = Batching + Capping the pool to number of threads
+  // means the batched data will be processed on n threads
+  
   val numThreads = Runtime.getRuntime.availableProcessors()
   val taskSupport = new ForkJoinTaskSupport(new ForkJoinPool(numThreads))
   Infrastructure.log("INFO", s"Starting — $numThreads threads available")
 
   // ── Helper: run a transformation in parallel with the capped pool ─────────
   def parWithCap[A, B](batch: Seq[A])(f: A => B): Seq[B] = {
+    // Line 1: Convert regular Seq to parallel collection
     val par = batch.par
+
+    // Line 2: Assign our capped thread pool
     par.tasksupport = taskSupport
+
+    // Line 3: Apply f in parallel, collect back to regular List
     par.map(f).toList
   }
 
